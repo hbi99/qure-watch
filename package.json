@@ -19,6 +19,7 @@
   "dependencies": {
     "accord": "^0.24.1",
     "chokidar": "^1.5.1",
+    "readable-stream": "^2.1.4",
     "through2": "^2.0.1"
   },
   "devDependencies": {

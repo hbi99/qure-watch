@@ -1,35 +1,53 @@
 
 'use strict';
 
+var events = ['add', 'change', 'unlink', 'addDir', 'unlinkDir', 'error', 'ready', 'raw'];
+
 var accord = require('accord'),
 	chokidar = require('chokidar'),
-	through2 = require('through2'),
-	less = require('less');
+//	through2 = require('through2'),
+	Duplex = require('readable-stream').Duplex;
 
-// fs.createReadStream('README.md')
-// 	.pipe(through2(function (chunk, enc, callback) {
-// 		console.log(chunk, enc, callback);
-// 	}));
-
-var watcher = chokidar.watch('README.md', {
-	ignored: /[\/\\]\./,
-	persistent: true
-});
-
-watcher
-	.on('add', function(path) {
-		console.log(`File ${path} has been added`)
-	})
-	.on('change', function(path) {
-		console.log(`File ${path} has been changed`)
-	})
-	.on('unlink', function(path) {
-		console.log(`File ${path} has been removed`);
-	});
 
 
 module.exports = {
-	init: function() {
+	init: function(path, cb) {
 		
+		var watcher = chokidar.watch(path, {
+				ignored: /[\/\\]\./,
+				persistent: true
+			});
+
+		watcher.on('all', function(event, path) {
+			console.log(event, path);
+		});
+
+		var outputStream = new Duplex({
+				objectMode: true,
+				allowHalfOpen: true
+			});
+
+		outputStream._write = function _write(file, enc, done) {
+			cb(file);
+			this.push(file);
+			done();
+		};
+
+		outputStream._read = function _read() { };
+
+		outputStream.add = function add(newGlobs) {
+		//	newGlobs = normalizeGlobs(newGlobs)
+		//		.map(resolveGlob);
+			watcher.add(newGlobs);
+		//	globs.push.apply(globs, newGlobs);
+		};
+		outputStream.unwatch = watcher.unwatch.bind(watcher);
+		outputStream.close = function () {
+			watcher.close();
+			this.emit('end');
+		};
+
+		return outputStream;
+
 	}
 };
